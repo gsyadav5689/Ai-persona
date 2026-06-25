@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Centered Camera Body with rounded edges -->
+    <path
+        android:fillColor="#8B5CF6"
+        android:pathData="M 34,38 H 74 C 77.3,38 80,40.7 80,44 V 70 C 80,73.3 77.3,76 74,76 H 34 C 30.7,76 28,73.3 28,70 V 44 C 28,40.7 30.7,38 34,38 Z" />
+    <!-- Camera Lens outer ring -->
+    <path
+        android:fillColor="#F8FAFC"
+        android:pathData="M 54,44 C 47.4,44 42,49.4 42,56 C 42,62.6 47.4,68 54,68 C 60.6,68 66,62.6 66,56 C 66,49.4 60.6,44 54,44 Z" />
+    <!-- Camera Lens inner core -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M 54,49 C 50.1,49 47,52.1 47,56 C 47,59.9 50.1,63 54,63 C 57.9,63 61,59.9 61,56 C 61,52.1 57.9,49 54,49 Z" />
+    <!-- Top Flash/Button -->
+    <path
+        android:fillColor="#EC4899"
+        android:pathData="M 40,32 H 50 V 38 H 40 Z" />
+    <!-- Sparkle Stars -->
+    <path
+        android:fillColor="#EC4899"
+        android:pathData="M 72,24 L 74,29 L 79,31 L 74,33 L 72,38 L 70,33 L 65,31 L 70,29 Z" />
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M 82,42 L 83,45 L 86,46 L 83,47 L 82,50 L 81,47 L 78,46 L 81,45 Z" />
+</vector>
