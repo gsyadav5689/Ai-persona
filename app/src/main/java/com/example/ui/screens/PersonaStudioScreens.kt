@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
@@ -58,6 +59,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import android.content.ContentValues
+import android.provider.MediaStore
+import android.os.Environment
+import android.os.Build
 import com.example.data.AvatarGeneration
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.PersonaViewModel
@@ -366,6 +371,122 @@ fun GenerateScreen(viewModel: PersonaViewModel) {
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Face Matching & Rendering Engine Selection
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Slate800),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, Slate700.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth().testTag("matching_engine_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Face Matching & Rendering Engine",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Choose how your reference face is matched and rendered in the portrait.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Slate50.copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Option 1: Designed Composition (Instant Local Blending)
+                        val isComposition = viewModel.generationEngineMode == "Designed Composition"
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(if (isComposition) Slate700 else Slate900)
+                                .border(
+                                    width = if (isComposition) 2.dp else 1.dp,
+                                    brush = if (isComposition) {
+                                        Brush.linearGradient(listOf(AccentPurple, AccentRose))
+                                    } else {
+                                        Brush.linearGradient(listOf(Slate700, Slate700))
+                                    },
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .clickable { viewModel.selectGenerationEngineMode("Designed Composition") }
+                                .padding(12.dp)
+                                .testTag("engine_designed_composition")
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Brush,
+                                    contentDescription = "Designed Composition",
+                                    tint = if (isComposition) AccentRose else Slate600,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Designed",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = if (isComposition) Color.White else Slate50.copy(alpha = 0.8f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Instant local composition. Blends face with 100% precision, studio shadow, and ambient color lighting overlays.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isComposition) Slate100 else Slate600,
+                                lineHeight = 14.sp
+                            )
+                        }
+
+                        // Option 2: Gemini Multimodal AI Generation
+                        val isGemini = viewModel.generationEngineMode == "Gemini Multimodal"
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(if (isGemini) Slate700 else Slate900)
+                                .border(
+                                    width = if (isGemini) 2.dp else 1.dp,
+                                    brush = if (isGemini) {
+                                        Brush.linearGradient(listOf(AccentPurple, AccentRose))
+                                    } else {
+                                        Brush.linearGradient(listOf(Slate700, Slate700))
+                                    },
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .clickable { viewModel.selectGenerationEngineMode("Gemini Multimodal") }
+                                .padding(12.dp)
+                                .testTag("engine_gemini_multimodal")
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = "Gemini Multimodal",
+                                    tint = if (isGemini) AccentPurple else Slate600,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Gemini AI",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = if (isGemini) Color.White else Slate50.copy(alpha = 0.8f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Multimodal AI synthesis. Uses Gemini 2.5/3.1 flash image modality to generate custom scene variations.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isGemini) Slate100 else Slate600,
+                                lineHeight = 14.sp
+                            )
                         }
                     }
                 }
@@ -945,13 +1066,32 @@ fun GenerateScreen(viewModel: PersonaViewModel) {
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceEvenly
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Button(
                                         onClick = { showResultDialog = false },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Slate900)
+                                        colors = ButtonDefaults.buttonColors(containerColor = Slate900),
+                                        modifier = Modifier.weight(1f)
                                     ) {
-                                        Text("Gallery")
+                                        Text("Gallery", maxLines = 1)
+                                    }
+                                    Button(
+                                        onClick = {
+                                            viewModel.generatedImageResult?.let { base64Str ->
+                                                val success = saveImageToDownloads(context, base64Str, "Persona_Studio")
+                                                if (success) {
+                                                    Toast.makeText(context, "Portrait downloaded to Pictures/PersonaStudio!", Toast.LENGTH_LONG).show()
+                                                } else {
+                                                    Toast.makeText(context, "Failed to download portrait", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = AccentRose),
+                                        modifier = Modifier.weight(1.2f)
+                                    ) {
+                                        Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Download", maxLines = 1)
                                     }
                                     Button(
                                         onClick = {
@@ -967,11 +1107,12 @@ fun GenerateScreen(viewModel: PersonaViewModel) {
                                                 Toast.makeText(context, "Sharing unavailable", Toast.LENGTH_SHORT).show()
                                             }
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = AccentPurple)
+                                        colors = ButtonDefaults.buttonColors(containerColor = AccentPurple),
+                                        modifier = Modifier.weight(1f)
                                     ) {
                                         Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Share")
+                                        Text("Share", maxLines = 1)
                                     }
                                 }
                             }
@@ -1257,26 +1398,45 @@ fun GalleryScreen(viewModel: PersonaViewModel) {
                     
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Button(
+                            onClick = {
+                                val success = saveImageToDownloads(context, gen.imageUriOrBase64, "Persona_Studio")
+                                if (success) {
+                                    Toast.makeText(context, "Portrait downloaded to Pictures/PersonaStudio!", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "Failed to download portrait", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentPurple),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = "Download")
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Download", maxLines = 1)
+                        }
                         Button(
                             onClick = {
                                 viewModel.generateBrandKitFor(gen)
                                 Toast.makeText(context, "Loaded brand kit data in Profile tab!", Toast.LENGTH_SHORT).show()
                                 selectedGenForZoom = null
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = AccentRose)
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentRose),
+                            modifier = Modifier.weight(1f)
                         ) {
                             Icon(Icons.Default.CardMembership, contentDescription = "Brand Kit")
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Create Brand Kit")
+                            Text("Brand Kit", maxLines = 1)
                         }
-                        Button(
-                            onClick = { selectedGenForZoom = null },
-                            colors = ButtonDefaults.buttonColors(containerColor = Slate900)
-                        ) {
-                            Text("Close")
-                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = { selectedGenForZoom = null },
+                        colors = ButtonDefaults.buttonColors(containerColor = Slate900),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Close")
                     }
                 }
             }
@@ -1947,5 +2107,41 @@ fun PresetFaceThumbnail(presetId: String, isSelected: Boolean) {
                 else -> {}
             }
         }
+    }
+}
+
+fun saveImageToDownloads(context: Context, base64Str: String, fileNamePrefix: String): Boolean {
+    return try {
+        val decodedBytes = Base64.decode(base64Str, Base64.DEFAULT)
+        val bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size) ?: return false
+        val filename = "${fileNamePrefix}_${System.currentTimeMillis()}.jpg"
+        val contentResolver = context.contentResolver
+        val imageDetails = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/PersonaStudio")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+        }
+        val imageUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, imageDetails)
+        if (imageUri != null) {
+            contentResolver.openOutputStream(imageUri).use { outStream ->
+                if (outStream != null) {
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outStream)
+                }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                imageDetails.clear()
+                imageDetails.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                contentResolver.update(imageUri, imageDetails, null, null)
+            }
+            true
+        } else {
+            false
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
     }
 }
