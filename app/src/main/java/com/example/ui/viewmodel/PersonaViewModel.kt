@@ -246,6 +246,12 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
         return customApiKey.trim().ifEmpty { BuildConfig.GEMINI_API_KEY }
     }
 
+    val isDemoMode: Boolean
+        get() {
+            val key = getEffectiveApiKey()
+            return key.isEmpty() || key == "MY_GEMINI_API_KEY"
+        }
+
     // --- Selection State ---
     var selectedFaceId by mutableStateOf("sarah")
         private set
@@ -261,7 +267,7 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
         private set
     var isCustomMeasurementsEnabled by mutableStateOf(false)
         private set
-    var generationEngineMode by mutableStateOf("Designed Composition") // "Designed Composition" or "Gemini Multimodal"
+    var generationEngineMode by mutableStateOf("Gemini Multimodal") // "Designed Composition" or "Gemini Multimodal"
         private set
 
     fun selectGenerationEngineMode(mode: String) {
@@ -371,7 +377,24 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
             } else {
                 "creatively blending features for artistic styling"
             }
-            return "A professional portrait of $facePrompt with a $currentBodyTypeString physique, situated in: $scenarioPrompt. Rendered in a high-quality $selectedStyle style, lit by $selectedLighting lighting. Ultra-detailed, crisp focus, cinematic depth of field, $identityMode."
+            
+            val styleDetails = when (selectedStyle) {
+                "Photorealistic (8K)" -> "award-winning ultra-realistic business portrait photography, shot on professional DSLR with 85mm lens, f/1.8 aperture, realistic skin texture with fine pores, lifelike hair strands, sharp focus, 8k resolution"
+                "Cinematic Film Frame" -> "cinematic portrait movie still, dramatic film photography, rich movie-like color grading, cinematic atmospheric volumetric fog, high-fidelity depth of field, shot on Arri Alexa with anamorphic lens"
+                "3D Render / Unreal Engine 5" -> "ultra-high-end 3D character render, Unreal Engine 5 style, octane render quality, subsurface scattering skin shader, perfectly smooth mesh details, volumetric cybernetic details"
+                "Expressive Oil Painting" -> "rich expressive oil painting masterpiece, bold palette knife strokes, visible heavy impasto canvas texture, professional fine-art gallery lighting"
+                else -> selectedStyle
+            }
+
+            val lightingDetails = when (selectedLighting) {
+                "Studio Softlight" -> "lit by soft professional studio softbox key light, three-point portrait lighting setup, subtle soft shadows, natural white reflections on eyes and skin"
+                "Golden Hour Warmth" -> "bathed in warm golden hour sunset light, beautiful volumetric orange-amber sun rays, warm glowing backlighting, photorealistic lens flares"
+                "Cyberpunk Neon Glow" -> "cyberpunk neon lighting, vibrant hot pink rim light from left, electric cyan-blue key light from right, futuristic glowing neon ambient reflections"
+                "Chiaroscuro Rembrandt" -> "classic dramatic Rembrandt chiaroscuro side lighting, high-contrast chiaroscuro shadows, soft window key light casting a perfect triangular highlight on the cheek"
+                else -> selectedLighting
+            }
+
+            return "A professional portrait of $facePrompt with a $currentBodyTypeString physique, situated in: $scenarioPrompt. $styleDetails, $lightingDetails. Crisp focus on eyes, ultra-detailed, professional corporate headshot, $identityMode."
         }
 
     // --- Flows from Repository ---
@@ -533,24 +556,22 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
                         // Actual robust image generation pipeline using the Imagen & Gemini Image models
                         var base64Data: String? = null
 
-                        // --- Tier 1: Official Google Imagen 3 API (:predict) ---
+                        // --- Tier 1: Official Google Imagen 3 API (:generateImages) ---
                         try {
                             generationProgressMessage = "Connecting to Imagen 3 Engine..."
                             delay(500)
                             generationProgressMessage = "Synthesizing scenario with Imagen 3..."
                             
-                            val request = ImagenPredictRequest(
-                                instances = listOf(ImagenInstance(prompt = prompt)),
-                                parameters = ImagenParameters(
-                                    numberOfImages = 1,
-                                    outputMimeType = "image/jpeg",
-                                    aspectRatio = "1:1"
-                                )
+                            val request = GenerateImagesRequest(
+                                prompt = prompt,
+                                numberOfImages = 1,
+                                outputMimeType = "image/jpeg",
+                                aspectRatio = "1:1"
                             )
-                            val response = RetrofitClient.service.predictImagen("imagen-3.0-generate-002", apiKey, request)
-                            val predictionBytes = response.predictions?.firstOrNull()?.bytesBase64Encoded
-                            if (!predictionBytes.isNullOrBlank()) {
-                                base64Data = predictionBytes
+                            val response = RetrofitClient.service.generateImages("imagen-3.0-generate-002", apiKey, request)
+                            val imageBytes = response.generatedImages?.firstOrNull()?.image?.imageBytes
+                            if (!imageBytes.isNullOrBlank()) {
+                                base64Data = imageBytes
                                 generationProgressMessage = "Decoded base portraits from Imagen 3..."
                             }
                         } catch (e1: Exception) {
@@ -895,12 +916,36 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
             canvas.drawOval(faceOval, paint)
             paint.shader = null
 
-            // Soft pink blush on cheeks
-            paint.color = android.graphics.Color.parseColor("#FFC0CB")
-            paint.alpha = 95
-            canvas.drawCircle(size * 0.41f, faceCenterY + 25f, 22f, paint)
-            canvas.drawCircle(size * 0.59f, faceCenterY + 25f, 22f, paint)
-            paint.alpha = 255
+            // Volumetric spotlight highlight on the forehead, cheekbones, and chin
+            val radialGlow = android.graphics.RadialGradient(
+                size * 0.48f, faceCenterY - size * 0.08f, size * 0.15f,
+                android.graphics.Color.parseColor("#55FFFFFF"),
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            paint.shader = radialGlow
+            canvas.drawOval(faceOval, paint)
+            paint.shader = null
+
+            // Soft pink blush on cheeks with radial blend
+            val leftCheekGrad = android.graphics.RadialGradient(
+                size * 0.41f, faceCenterY + 25f, 25f,
+                android.graphics.Color.parseColor("#29F43F5E"), // soft translucent rose
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            paint.shader = leftCheekGrad
+            canvas.drawCircle(size * 0.41f, faceCenterY + 25f, 25f, paint)
+            
+            val rightCheekGrad = android.graphics.RadialGradient(
+                size * 0.59f, faceCenterY + 25f, 25f,
+                android.graphics.Color.parseColor("#29F43F5E"),
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            paint.shader = rightCheekGrad
+            canvas.drawCircle(size * 0.59f, faceCenterY + 25f, 25f, paint)
+            paint.shader = null
 
             // --- Hair System ---
             if (isSarah) {
@@ -916,7 +961,22 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
                 // High professional circular hair bun on top of head
                 canvas.drawCircle(size * 0.5f, faceCenterY - 110f, 32f, paint)
                 
-                // Fine hair gloss/highlights
+                // Hair sheen highlights
+                val hairSheen = android.graphics.LinearGradient(
+                    size * 0.32f, faceCenterY - 80f, size * 0.68f, faceCenterY - 80f,
+                    intArrayOf(
+                        android.graphics.Color.parseColor("#1A1412"),
+                        android.graphics.Color.parseColor("#4B3621"), // Warm silk highlight
+                        android.graphics.Color.parseColor("#1A1412")
+                    ),
+                    null,
+                    android.graphics.Shader.TileMode.CLAMP
+                )
+                paint.shader = hairSheen
+                canvas.drawPath(hairBack, paint)
+                paint.shader = null
+                
+                // Fine hair gloss/highlights lines
                 paint.style = android.graphics.Paint.Style.STROKE
                 paint.strokeWidth = 1.5f
                 paint.color = android.graphics.Color.parseColor("#44A8A29E")
@@ -934,7 +994,20 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
                 // Elena's creative short indigo haircut
                 paint.color = android.graphics.Color.parseColor("#2E1065") // Deep purple/indigo
                 canvas.drawCircle(size * 0.5f, faceCenterY - 70f, 95f, paint)
+                
+                // Elena hair sheen highlight
+                val elenaSheen = android.graphics.RadialGradient(
+                    size * 0.5f, faceCenterY - 120f, 80f,
+                    android.graphics.Color.parseColor("#6366F1"),
+                    android.graphics.Color.TRANSPARENT,
+                    android.graphics.Shader.TileMode.CLAMP
+                )
+                paint.shader = elenaSheen
+                canvas.drawCircle(size * 0.5f, faceCenterY - 70f, 95f, paint)
+                paint.shader = null
+
                 // Left & right bangs
+                paint.color = android.graphics.Color.parseColor("#2E1065")
                 canvas.drawRect(size * 0.32f, faceCenterY - 70f, size * 0.37f, faceCenterY + 50f, paint)
                 canvas.drawRect(size * 0.63f, faceCenterY - 70f, size * 0.68f, faceCenterY + 50f, paint)
             } else {
@@ -945,6 +1018,17 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
                 hairPath.cubicTo(size * 0.34f, faceCenterY - 130f, size * 0.66f, faceCenterY - 130f, size * 0.68f, faceCenterY - 30f)
                 hairPath.close()
                 canvas.drawPath(hairPath, paint)
+
+                // Short hair 3D layers
+                val shortSheen = android.graphics.LinearGradient(
+                    0f, faceCenterY - 110f, 0f, faceCenterY - 40f,
+                    intArrayOf(android.graphics.Color.parseColor("#44FFFFFF"), android.graphics.Color.TRANSPARENT),
+                    null,
+                    android.graphics.Shader.TileMode.CLAMP
+                )
+                paint.shader = shortSheen
+                canvas.drawPath(hairPath, paint)
+                paint.shader = null
             }
 
             // --- Highly Detailed Realistic Eyes ---
@@ -960,15 +1044,25 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
             canvas.drawOval(lEye, paint)
             canvas.drawOval(rEye, paint)
 
-            // Irises (beautiful warm hazel brown or cobalt blue)
+            // Limbal rings (dark borders around iris)
+            paint.color = android.graphics.Color.parseColor("#1C1917")
+            canvas.drawCircle(size * 0.43f, faceCenterY - 5f, 6.8f, paint)
+            canvas.drawCircle(size * 0.57f, faceCenterY - 5f, 6.8f, paint)
+
+            // Irises (beautiful warm hazel brown or cobalt blue with radial gradients)
             paint.color = if (isSarah) android.graphics.Color.parseColor("#854D0E") else android.graphics.Color.parseColor("#2563EB") // warm hazel brown / blue
             canvas.drawCircle(size * 0.43f, faceCenterY - 5f, 6f, paint)
             canvas.drawCircle(size * 0.57f, faceCenterY - 5f, 6f, paint)
 
+            val irisInnerColor = if (isSarah) "#A16207" else "#3B82F6"
+            paint.color = android.graphics.Color.parseColor(irisInnerColor)
+            canvas.drawCircle(size * 0.43f, faceCenterY - 5f, 4.5f, paint)
+            canvas.drawCircle(size * 0.57f, faceCenterY - 5f, 4.5f, paint)
+
             // Pupils
             paint.color = android.graphics.Color.BLACK
-            canvas.drawCircle(size * 0.43f, faceCenterY - 5f, 3f, paint)
-            canvas.drawCircle(size * 0.57f, faceCenterY - 5f, 3f, paint)
+            canvas.drawCircle(size * 0.43f, faceCenterY - 5f, 2.5f, paint)
+            canvas.drawCircle(size * 0.57f, faceCenterY - 5f, 2.5f, paint)
 
             // Eyelashes & eyelids
             paint.style = android.graphics.Paint.Style.STROKE
@@ -998,10 +1092,15 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
             canvas.drawPath(rBrow, paint)
             paint.style = android.graphics.Paint.Style.FILL
 
-            // Eye sparkling catchlights (makes eyes look incredibly alive and glossy)
+            // Eye sparkling catchlights (multi-angle reflections make eyes look incredibly alive)
             paint.color = android.graphics.Color.WHITE
             canvas.drawCircle(size * 0.44f, faceCenterY - 7f, 1.8f, paint)
             canvas.drawCircle(size * 0.58f, faceCenterY - 7f, 1.8f, paint)
+            // Soft secondary reflections
+            paint.alpha = 150
+            canvas.drawCircle(size * 0.418f, faceCenterY - 3f, 1f, paint)
+            canvas.drawCircle(size * 0.558f, faceCenterY - 3f, 1f, paint)
+            paint.alpha = 255
 
             // --- Realistic Nose Shading ---
             paint.color = android.graphics.Color.parseColor("#15000000")
@@ -1037,9 +1136,10 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
 
             // Lip glossy reflections/highlights (3D volume)
             paint.color = android.graphics.Color.WHITE
-            paint.alpha = 180
+            paint.alpha = 200
             canvas.drawCircle(size * 0.50f, faceCenterY + 49f, 2.5f, paint)
             canvas.drawCircle(size * 0.48f, faceCenterY + 48f, 1.5f, paint)
+            canvas.drawCircle(size * 0.52f, faceCenterY + 48f, 1.2f, paint) // glossy sheen
             paint.alpha = 255
 
             // --- Elegant Ear Details & Jewelry ---
@@ -1073,6 +1173,24 @@ class PersonaViewModel(private val repository: AvatarRepository) : ViewModel() {
         paint.shader = vignette
         canvas.drawRect(0f, 0f, size.toFloat(), size.toFloat(), paint)
         paint.shader = null
+
+        // Add high-end subtle photographic film grain texture to remove solid flat fills
+        val random = java.util.Random()
+        paint.color = android.graphics.Color.WHITE
+        for (i in 0..850) {
+            val rx = random.nextFloat() * size
+            val ry = random.nextFloat() * size
+            paint.alpha = random.nextInt(14) + 3 // very subtle transparency (3-17)
+            canvas.drawRect(rx, ry, rx + 1.2f, ry + 1.2f, paint)
+        }
+        paint.color = android.graphics.Color.BLACK
+        for (i in 0..850) {
+            val rx = random.nextFloat() * size
+            val ry = random.nextFloat() * size
+            paint.alpha = random.nextInt(10) + 2 // very subtle transparency (2-11)
+            canvas.drawRect(rx, ry, rx + 1.2f, ry + 1.2f, paint)
+        }
+        paint.alpha = 255
 
         // Professional watermark label in bottom-left corner
         paint.style = android.graphics.Paint.Style.FILL

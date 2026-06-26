@@ -87,7 +87,37 @@ interface GeminiApiService {
         @Query("key") apiKey: String,
         @Body request: ImagenPredictRequest
     ): ImagenPredictResponse
+
+    @POST("v1beta/models/{model}:generateImages")
+    suspend fun generateImages(
+        @Path("model") model: String,
+        @Query("key") apiKey: String,
+        @Body request: GenerateImagesRequest
+    ): GenerateImagesResponse
 }
+
+@JsonClass(generateAdapter = true)
+data class GenerateImagesRequest(
+    val prompt: String,
+    val numberOfImages: Int? = 1,
+    val outputMimeType: String? = "image/jpeg",
+    val aspectRatio: String? = "1:1"
+)
+
+@JsonClass(generateAdapter = true)
+data class GenerateImagesResponse(
+    val generatedImages: List<GeneratedImage>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class GeneratedImage(
+    val image: ImageBytes? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ImageBytes(
+    val imageBytes: String? = null
+)
 
 @JsonClass(generateAdapter = true)
 data class ImagenPredictRequest(

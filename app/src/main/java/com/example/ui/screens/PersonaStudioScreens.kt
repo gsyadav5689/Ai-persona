@@ -399,12 +399,14 @@ fun GenerateScreen(viewModel: PersonaViewModel) {
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     
+                    val isComposition = viewModel.generationEngineMode == "Designed Composition"
+                    val isGemini = viewModel.generationEngineMode == "Gemini Multimodal"
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         // Option 1: Designed Composition (Instant Local Blending)
-                        val isComposition = viewModel.generationEngineMode == "Designed Composition"
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -447,7 +449,6 @@ fun GenerateScreen(viewModel: PersonaViewModel) {
                         }
 
                         // Option 2: Gemini Multimodal AI Generation
-                        val isGemini = viewModel.generationEngineMode == "Gemini Multimodal"
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -487,6 +488,42 @@ fun GenerateScreen(viewModel: PersonaViewModel) {
                                 color = if (isGemini) Slate100 else Slate600,
                                 lineHeight = 14.sp
                             )
+                        }
+                    }
+
+                    if (isGemini && viewModel.isDemoMode) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(AccentRose.copy(alpha = 0.15f))
+                                .border(1.dp, AccentRose.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                        ) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Demo Mode",
+                                        tint = AccentRose,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Simulation Fallback Active",
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                        color = AccentRose
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "To enable real photorealistic AI generation, please set a valid Gemini API Key in Settings (Tab 4). Otherwise, the studio utilizes a beautifully stylized 3D local portrait blending composition.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Slate100.copy(alpha = 0.85f),
+                                    lineHeight = 14.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -1056,6 +1093,16 @@ fun GenerateScreen(viewModel: PersonaViewModel) {
                                                 .border(2.dp, AccentRose, RoundedCornerShape(16.dp))
                                         )
                                     }
+                                }
+                                if (viewModel.isDemoMode) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "✨ Styled 3D Local Synthesis Fallback ✨\n(Configure your Gemini API key in Settings to unlock photorealistic AI generation)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Slate100.copy(alpha = 0.6f),
+                                        textAlign = TextAlign.Center,
+                                        lineHeight = 14.sp
+                                    )
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
